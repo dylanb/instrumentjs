@@ -1,0 +1,24 @@
+{
+  "name": "instrumentjs",
+  "version": "0.0.2",
+  "description": "Add coverage instrumentation to JavaScript code",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dylanb/instrumentjs.git"
+  },
+  "keywords": [
+    "Coverage",
+    "Instrumentation",
+    "Instrument"
+  ],
+  "author": "Dylan Barrell",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/dylanb/instrumentjs/issues"
+  },
+  "homepage": "https://github.com/dylanb/instrumentjs"
+}
