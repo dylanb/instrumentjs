@@ -1,6 +1,6 @@
 {
   "name": "instrumentjs",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Add coverage instrumentation to JavaScript code",
   "main": "index.js",
   "scripts": {
