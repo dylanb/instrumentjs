@@ -41,4 +41,4 @@ Where the values of the items in the `names` structure are the function calls th
 
 You can use these values to create functions that will capture the instrumentation data as the instrumented javascript is executed.
 
-For an example of how this is used, see the (gulp coverage)[https://github.com/dylanb/gulp-coverage] module.
+For an example of how this is used, see the [gulp coverage](https://github.com/dylanb/gulp-coverage) module.
