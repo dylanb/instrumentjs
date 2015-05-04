@@ -4,7 +4,7 @@
   "description": "Add coverage instrumentation to JavaScript code",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "mocha tests/*.js"
   },
   "repository": {
     "type": "git",
@@ -20,5 +20,10 @@
   "bugs": {
     "url": "https://github.com/dylanb/instrumentjs/issues"
   },
-  "homepage": "https://github.com/dylanb/instrumentjs"
+  "homepage": "https://github.com/dylanb/instrumentjs",
+  "dependencies": {
+    "rsvp": "^3.0.18",
+    "systemjs": "^0.16.10",
+    "underscore": "~1.5.2"
+  }
 }
