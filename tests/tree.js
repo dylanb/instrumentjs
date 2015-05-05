@@ -59,35 +59,62 @@ describe('the tree instrumentor', function () {
 		var i = new instrument.Instrumentor(src.join('\n'));
 		instrument.traceurPromise.then(function () {
 			var statNum = 0;
-			var iSrc = src.map(function (item) {
-				return i.names.statement + '(' + statNum++ + ');\n' + item;
-			}).join('\n');
-			assert.equal(iSrc + '\n', i.instrumentedSource);
+			var iSrc = '' +
+				i.names.statement + '(0);\n' +
+				'var ' + i.names.expression + '(0), a;\n' +
+				i.names.statement + '(1);\n' +
+				i.names.expression + '(1), ' + i.names.expression + '(2), a = ' + i.names.expression + '(3), 1;\n';
+			assert.equal(iSrc, i.instrumentedSource);
 			done();
 		});
 	});
 	it('should put a statement call in front of each line for ES6 code', function (done) {
-		var src = ['import {a} from \'thingy\';', 'export var a = 1;', 'export class Minky {\n  constructor() {}\n}'];
+		var src = ['import {a} from \'thingy\';', 'export var a = 1 || 2;', 'export class Minky {\n  constructor() {}\n}'];
 		var i = new instrument.Instrumentor(src.join('\n'));
 		instrument.traceurPromise.then(function () {
 			var statNum = 0;
-			var iSrc = src.map(function (item) {
-				return i.names.statement + '(' + statNum++ + ');\n' + item;
-			}).join('\n');
-			assert.equal(iSrc + '\n', i.instrumentedSource);
+			var iSrc = i.names.statement + '(0);\n' +
+					'import {a} from \'thingy\';\n' +
+					i.names.statement + '(1);\n' +
+					'export var' + i.names.expression + '(0), a = ' + i.names.expression + '(1),' + i.names.expression + '(2), 1 ||' + i.names.expression + '(3), 2;\n' +
+					i.names.statement + '(2);\n' +
+					'export class Minky {\n' +
+					'  ' + i.names.statement + '(3);\n' +
+					'  constructor() {\n' +
+					'    ' + i.names.block + '(0);\n' +
+					'  }\n' +
+					'}\n';
+			i.instrumentedSource = i.instrumentedSource.replace(/ /gi, '');
+			iSrc = iSrc.replace(/ /gi, '');
+			// console.log(iSrc);
+			// console.log(i.instrumentedSource);
+			assert.equal(iSrc, i.instrumentedSource);
 			done();
 		});
 	});
-	it('should put a statement call in front of each statement inside blocks', function (done) {
+	it('should add statement calls, block calls and expression calls. Should also collect the nodes for each', function (done) {
 		var src = ['if (true) {', 'while (true) {', 'a = 1;\n}\n}'];
 		var i = new instrument.Instrumentor(src.join('\n'));
 		instrument.traceurPromise.then(function () {
 			var statNum = 0;
-			var iSrc = src.map(function (item) {
-				return i.names.statement + '(' + statNum++ + ');\n' + item;
-			}).join('\n').replace(/ /gi, '');
+			var blockNum = 0;
+			var iSrc = ('' +
+				i.names.statement + '(0);\n' +
+				'if (' + i.names.expression + '(0), true) {\n' +
+				i.names.block + '(0);\n' +
+				i.names.statement + '(1);\n' +
+				'while(' + i.names.expression + '(1), true) {\n' +
+				i.names.block + '(1);\n' +
+				i.names.statement + '(2);\n' +
+				i.names.expression + '(2),' + i.names.expression + '(3),a = ' + i.names.expression + '(4),1;\n' +
+				'}\n}\n').replace(/ /gi, '');
 			i.instrumentedSource = i.instrumentedSource.replace(/ /gi, '');
-			assert.equal(iSrc + '\n', i.instrumentedSource);
+			// console.log(iSrc);
+			// console.log(i.instrumentedSource);
+			assert.equal(iSrc, i.instrumentedSource);
+			assert.equal(i.blockList.length, 2);
+			assert.equal(i.expressionList.length, 5);
+			assert.equal(i.statementList.length, 3);
 			done();
 		});
 	});

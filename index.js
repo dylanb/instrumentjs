@@ -203,7 +203,11 @@ Instrumentor.prototype.instrument = function (code) {
     this.parseTreeFactory = traceur.ModuleStore.get('traceur@0.0.90/src/codegeneration/ParseTreeFactory.js');
 
     this.statementNo = 0;
-    this.nodeList = [];
+    this.blockNo = 0;
+    this.expressionNo = 0;
+    this.statementList = [];
+    this.blockList = [];
+    this.expressionList = [];
     // Parse the code
     this.tree = this.parser.parseModule();
 
@@ -212,35 +216,89 @@ Instrumentor.prototype.instrument = function (code) {
     return this.generate();
 };
 
-Instrumentor.prototype.createStatementExpression = function (node) {
-    var number = this.parseTreeFactory.createNumberLiteral(this.statementNo++);
-    var args = this.parseTreeFactory.createArgumentList([number]);
-    var funcName = this.parseTreeFactory.createIdentifierExpression(this.names.statement);
-    var callExp = this.parseTreeFactory.createCallExpression(funcName, args);
+Instrumentor.prototype.createFunctionCallExpression = function (num, funcName) {
+    var callExp = this.createCallExpression(num, funcName);
     var exp = this.parseTreeFactory.createExpressionStatement(callExp);
-    this.nodeList.push(node);
+    exp.noCover = true;
+    return exp;
+};
+
+Instrumentor.prototype.createCallExpression = function (num, funcName) {
+    var number = this.parseTreeFactory.createNumberLiteral(num);
+    var args = this.parseTreeFactory.createArgumentList([number]);
+    var funcName = this.parseTreeFactory.createIdentifierExpression(funcName);
+    var callExp = this.parseTreeFactory.createCallExpression(funcName, args);
+    return callExp;
+};
+
+Instrumentor.prototype.createStatementExpression = function (node) {
+    var exp = this.createFunctionCallExpression(this.statementNo++, this.names.statement);
+    this.statementList.push(node);
     return exp;
 }
 
+Instrumentor.prototype.addBlockExpression = function (node, list) {
+    var exp = this.createFunctionCallExpression(this.blockNo++, this.names.block);
+    this.blockList.push(node);
+    list.splice(0, 0, exp); // insert at the beginning
+};
+
 Instrumentor.prototype.instrumentTreeList = function (list) {
-    var node, i;
+    var node, i, inspect;
     for (i = 0; i < list.length; i++) {
         node = list[i];
+        if (node.noCover) continue;
         list.splice(i, 0, this.createStatementExpression(node));
         i++;
-        this.traverseNode(node);
+        inspect = node;
+        if (node.isExpression() || node.isDeclaration()) {
+            list[i] = this.createCommaExpression(node)
+        }
+        this.traverseNode(inspect);
     }
     // console.log(JSON.stringify(this.tree, null, " "));
 };
 
+Instrumentor.prototype.expressionTreeList = function (list) {
+    var node, i, inspect;
+    for (i = 0; i < list.length; i++) {
+        node = list[i];
+        if (node.noCover) continue;
+        inspect = node;
+        if (node.isExpression() || node.isDeclaration()) {
+            list[i] = this.createCommaExpression(node)
+        }
+        this.traverseNode(inspect);
+    }
+};
+
+Instrumentor.prototype.createCommaExpression = function (node) {
+    this.expressionList.push(node);
+    var fCall = this.createCallExpression(this.expressionNo++, this.names.expression);
+    var comma = this.parseTreeFactory.createCommaExpression([fCall, node]);
+    return comma;
+};
+
 Instrumentor.prototype.traverseNode = function (node) {
+    var att, inspect;
     for (att in node) {
-        if (node[att] && typeof node[att].isStatement === 'function' &&
-            (node[att].isStatement() || node[att].isExpression())) {
-            this.traverseNode(node[att]);
+        // console.log(att);
+        if (node[att] && typeof node[att].isExpression === 'function') {
+            // console.log(node.type);
+            inspect = node[att];
+            if (node[att].isExpression() || node.type === javascript.Syntax.VARIABLE_DECLARATION) {
+                node[att] = this.createCommaExpression(node[att])
+            }
+            this.traverseNode(inspect);
         } else if (Array.isArray(node[att])) {
-            if (node.type === javascript.Syntax.BLOCK) {
+            if (node.type === javascript.Syntax.BLOCK ||
+                node.type === javascript.Syntax.FUNCTION_BODY) {
+                this.addBlockExpression(node, node[att]);
                 this.instrumentTreeList(node[att]);
+            } else if (node.type === javascript.Syntax.CLASS_DECLARATION) {
+                this.instrumentTreeList(node[att]);
+            } else if (node.type === javascript.Syntax.VARIABLE_DECLARATION_LIST) {
+                this.expressionTreeList(node[att]);
             }
         }
     }
